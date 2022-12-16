@@ -1,0 +1,101 @@
+import 'dart:convert';
+import 'dart:ffi';
+
+import 'package:flutter/cupertino.dart';
+import 'package:idepronet/src/api/environment.dart';
+import 'package:idepronet/src/models/response_api.dart';
+import 'package:idepronet/src/models/user.dart';
+import 'package:idepronet/src/utils/shared_pref.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:http/http.dart' as http;
+
+import '../models/credito_rechazado.dart';
+
+class NegociosProvider {
+
+  String _url = Environment.API_IDEPRO;
+  String _api = '/negocios/creditoRechazado';
+  BuildContext context;
+  User sessionUser;
+
+  Future init(BuildContext context, User sessionUser) {
+    this.context = context;
+    this.sessionUser = sessionUser;
+  }
+  Future<List<CreditoRechazado>> getByUser(String usuario,String token) async {
+    try {
+      Uri url = Uri.http(_url, '/negocios/creditoRechazado/findByCreditosRechazadoList/${usuario}');
+      Map<String, String> headers = {
+        'Content-type': 'application/json',
+        'Authorization': token
+      };
+      final res = await http.get(url, headers: headers);
+
+      if (res.statusCode == 401) {
+        Fluttertoast.showToast(msg: 'Sesion expirada');
+        new SharedPref().logout(context, sessionUser.nombre);
+      }
+      final data = json.decode(res.body); // CATEGORIAS
+      CreditoRechazado creditoRechazado = CreditoRechazado.fromJsonList(data);
+      return creditoRechazado.toList;
+    }
+    catch(e) {
+      print('Error: $e' );
+      return [];
+    }
+  }
+
+  Future<ResponseApi> delete(String id,String token) async {
+    try {
+      Uri url = Uri.http(_url, '/negocios/creditoRechazado/findByCreditosRechazadoDelete/${id}');
+      Map<String, String> headers = {
+        'Content-type': 'application/json',
+        'Authorization': token
+      };
+      final res = await http.get(url, headers: headers);
+
+      if (res.statusCode == 401) {
+        Fluttertoast.showToast(msg: 'Sesion expirada');
+        new SharedPref().logout(context, sessionUser.nombre);
+      }
+
+      final data = json.decode(res.body);
+      ResponseApi responseApi = ResponseApi.fromJson(data);
+      return responseApi;
+    }
+    catch(e) {
+      print('Error: $e' );
+      return null;
+    }
+  }
+
+
+
+  Future<ResponseApi> create(CreditoRechazado creditoRechazado) async {
+    try {
+      print('SAVE CREDITO RECHAZADO' );
+      print(creditoRechazado );
+      Uri url = Uri.http(_url, '$_api/create');
+      String bodyParams = json.encode(creditoRechazado);
+      Map<String, String> headers = {
+        'Content-type': 'application/json',
+        'Authorization': sessionUser.sessionToken
+      };
+      final res = await http.post(url, headers: headers, body: bodyParams);
+
+      if (res.statusCode == 401) {
+        Fluttertoast.showToast(msg: 'Sesion expirada');
+        new SharedPref().logout(context, sessionUser.nombre);
+      }
+
+      final data = json.decode(res.body);
+      ResponseApi responseApi = ResponseApi.fromJson(data);
+      return responseApi;
+    }
+    catch(e) {
+      print('Error: $e');
+      return null;
+    }
+  }
+
+}
